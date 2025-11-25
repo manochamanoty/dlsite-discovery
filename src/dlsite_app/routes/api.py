@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from flask import Blueprint, jsonify
 
 from dlsite_app.config import settings
@@ -6,6 +7,7 @@ from dlsite_app.db import get_db_connection
 
 
 api_bp = Blueprint("api", __name__)
+STATIC_WORKS_PATH = settings.base_dir / "static" / "works.json"
 
 
 def generate_affiliate_link(work: dict) -> str | None:
@@ -18,18 +20,46 @@ def generate_affiliate_link(work: dict) -> str | None:
     )
 
 
+def load_static_works() -> list[dict]:
+    """Fallback loader when DB is absent (e.g., Vercel static deploy)."""
+    path = Path(STATIC_WORKS_PATH)
+    if not path.exists():
+        return []
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return data
+    except Exception:
+        pass
+    return []
+
+
 @api_bp.route("/works")
 def works():
-    conn = get_db_connection()
-    query = """
-        SELECT 
-            w.rj_code, w.site_id, w.title, w.circle, w.release_date, w.description, w.img_url, w.media, w.embeds, w.chobit_url, w.genres, w.cv, w.content_tokens,
-            s.dl_count, s.price, s.rate_average, s.wishlist_count, s.rate_count_detail
-        FROM works w
-        LEFT JOIN stats s ON w.rj_code = s.rj_code
-    """
-    rows = conn.execute(query).fetchall()
-    conn.close()
+    rows = []
+    try:
+        conn = get_db_connection()
+        query = """
+            SELECT 
+                w.rj_code, w.site_id, w.title, w.circle, w.release_date, w.description, w.img_url, w.media, w.embeds, w.chobit_url, w.genres, w.cv, w.content_tokens,
+                s.dl_count, s.price, s.rate_average, s.wishlist_count, s.rate_count_detail
+            FROM works w
+            LEFT JOIN stats s ON w.rj_code = s.rj_code
+        """
+        rows = conn.execute(query).fetchall()
+    except Exception:
+        rows = []
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    # If DB is unavailable or empty (e.g., Vercel), serve static snapshot
+    if not rows:
+        static_data = load_static_works()
+        return jsonify(static_data)
 
     result = []
     for row in rows:
