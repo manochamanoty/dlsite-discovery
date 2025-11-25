@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ja" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASMR Finder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Custom Scrollbar for Modal */
+        .modal-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .modal-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+
+        /* Media Carousel Scrollbar */
+        .media-scroll::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .media-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .media-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+
+        /* Keep original line breaks in description */
+        .preserve-whitespace {
+            white-space: pre-wrap;
+        }
+
+        .token-image {
+            width: 100%;
+            max-height: 320px;
+            object-fit: contain;
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-800 shadow-sm sticky top-0 z-40 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 tracking-tight flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+                ASMR Finder
+            </h1>
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-slate-500 dark:text-slate-400 hidden sm:block">
+                    <span data-i18n="loaded">Loaded</span> <span id="work-count"
+                        class="font-bold text-slate-900 dark:text-white">0</span> <span data-i18n="works">works</span>
+                </div>
+                <button id="lang-toggle"
+                    class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition text-slate-600 dark:text-slate-300 font-bold text-sm">EN</button>
+                <button id="theme-toggle"
+                    class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition text-slate-600 dark:text-slate-300">
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 100 2h1z"
+                            fill-rule="evenodd" clip-rule="evenodd"></path>
+                    </svg>
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div
+            class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-8 transition-colors duration-300">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h2 class="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3"
+                        data-i18n="filter">Filter</h2>
+                    <div class="flex gap-2 mb-2">
+                        <button
+                            class="shortcut-btn text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition"
+                            onclick="insertPrefix('tag:')">tag:</button>
+                        <button
+                            class="shortcut-btn text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition"
+                            onclick="insertPrefix('cv:')">cv:</button>
+                        <button
+                            class="shortcut-btn text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition"
+                            onclick="insertPrefix('circle:')">circle:</button>
+                    </div>
+                    <div class="relative flex gap-2">
+                        <input type="text" id="search-input" placeholder="Search title, circle, tag..."
+                            class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                        <button id="add-filter-btn"
+                            class="bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg font-medium transition"
+                            onclick="addManualFilter()">Add</button>
+                    </div>
+                    <div id="active-tags" class="mt-3 flex flex-wrap gap-2"></div>
+                </div>
+                <div>
+                    <h2
+                        class="text-sm font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span data-i18n="custom_sort">🧪 Custom Sort</span>
+                    </h2>
+                    <div class="flex gap-2 mb-2">
+                        <input type="text" id="sort-formula" placeholder="e.g. dl / price" value="dl / price"
+                            class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition font-mono text-sm">
+                        <button id="apply-sort"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition"
+                            data-i18n="sort_btn">Sort</button>
+                    </div>
+                    <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                        <button
+                            class="preset-btn text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-3 py-1 rounded-full transition whitespace-nowrap"
+                            data-formula="dl / price">💰 <span data-i18n="preset_cosplay">Cosplay
+                                (DL/Price)</span></button>
+                        <button
+                            class="preset-btn text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-3 py-1 rounded-full transition whitespace-nowrap"
+                            data-formula="dl">🔥 <span data-i18n="preset_pop">Popularity (DL)</span></button>
+                        <button
+                            class="preset-btn text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-3 py-1 rounded-full transition whitespace-nowrap"
+                            data-formula="rate * dl">💎 <span data-i18n="preset_hidden">Hidden Gem
+                                (Rate*DL)</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="results-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+    </main>
+
+    <!-- Detail Modal -->
+    <div id="detail-modal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
+        aria-modal="true">
+        <div class="absolute inset-0 bg-slate-900/75 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+        <div class="fixed inset-0 z-10 overflow-y-auto" onclick="if(event.target === this) closeModal()">
+            <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                <div
+                    class="modal-panel relative transform overflow-hidden rounded-2xl bg-white dark:bg-slate-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl max-h-[90vh] flex flex-col">
+                    <button onclick="closeModal()"
+                        class="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/20 hover:bg-black/40 text-white transition">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                    <div class="flex-shrink-0 relative">
+                        <img id="modal-img" src="https://placehold.co/600x400?text=Loading..." alt="Work Image"
+                            class="w-full h-64 object-cover rounded-t-2xl">
+                        <div
+                            class="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-transparent to-transparent">
+                        </div>
+                        <h3 id="modal-title"
+                            class="absolute bottom-4 left-4 text-2xl font-bold text-white drop-shadow-lg"></h3>
+                    </div>
+
+                    <div id="modal-scroll-container" class="modal-scroll overflow-y-auto p-6 flex-1">
+                        <div class="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400 mb-4">
+                            <span id="modal-circle" class="font-medium text-indigo-600 dark:text-indigo-400"></span>
+                            <span id="modal-date"></span>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                            <div
+                                class="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg text-center border border-slate-200 dark:border-slate-600">
+                                <p class="text-xs text-slate-500 dark:text-slate-400">DL Count</p>
+                                <p id="modal-dl" class="text-lg font-bold text-slate-800 dark:text-slate-100">0</p>
+                            </div>
+                            <div
+                                class="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg text-center border border-slate-200 dark:border-slate-600">
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Price</p>
+                                <p id="modal-price" class="text-lg font-bold text-slate-800 dark:text-slate-100">¥0
+                                </p>
+                            </div>
+                            <div
+                                class="bg-slate-50 dark:bg-slate-700 p-3 rounded-lg text-center border border-slate-200 dark:border-slate-600">
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Avg. Rate</p>
+                                <p id="modal-rate-avg" class="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                    -</p>
+                            </div>
+                            <a id="modal-link" href="#" target="_blank"
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-lg flex items-center justify-center text-center font-medium transition"
+                                data-i18n="view_dlsite">View on DLsite</a>
+                        </div>
+
+                        <h4 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2"
+                            data-i18n="description">Description</h4>
+                        <div id="modal-desc"
+                            class="prose prose-sm dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 mb-4 preserve-whitespace">
+                        </div>
+                        <div id="desc-samples" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6"></div>
+
+                        <div id="modal-cv-section" class="mb-6">
+                            <h4 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">CVs</h4>
+                            <div id="modal-cv-list" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">Tags</h4>
+                            <div id="modal-tags" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <div id="media-section" class="mb-6">
+                            <h4 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">Media</h4>
+                            <div id="media-container"
+                                class="flex overflow-x-auto gap-4 pb-2 media-scroll snap-x snap-mandatory">
+                            </div>
+                        </div>
+
+                        <div id="embeds-section" class="mb-6">
+                            <h4 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">Embeds</h4>
+                            <div id="embeds-container" class="grid grid-cols-1 gap-4"></div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">Rating
+                                Distribution</h4>
+                            <div class="h-48">
+                                <canvas id="ratingChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu"
+        class="hidden fixed z-50 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 w-48 py-1 transform transition-all duration-100 opacity-0 scale-95 origin-top-left">
+        <button id="ctx-search"
+            class="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <span data-i18n="ctx_search">Add to Search</span>
+        </button>
+        <button id="ctx-exclude"
+            class="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
+                </path>
+            </svg>
+            <span data-i18n="ctx_exclude">Exclude</span>
+        </button>
+    </div>
+
+    <script>
+        let allWorks = [];
+        let currentLang = 'ja';
+        let activeTags = { include: [], exclude: [] };
+        const translations = {
+            ja: { loaded: "読込完了:", works: "作品", filter: "フィルター", custom_sort: "🧪 魔改造ソート", sort_btn: "ソート", preset_cosplay: "コスパ順 (DL/円)", preset_pop: "人気順 (DL)", preset_hidden: "隠れた名作 (評価*DL)", view_dlsite: "DLsiteで見る", description: "作品説明", ctx_search: "このタグで検索", ctx_exclude: "このタグを除外" },
+            en: { loaded: "Loaded", works: "works", filter: "Filter", custom_sort: "🧪 Custom Sort", sort_btn: "Sort", preset_cosplay: "Cosplay (DL/Price)", preset_pop: "Popularity (DL)", preset_hidden: "Hidden Gem (Rate*DL)", view_dlsite: "View on DLsite", description: "Description", ctx_search: "Add to Search", ctx_exclude: "Exclude Tag" }
+        };
+
+        async function fetchWorks() {
+
+            try {
+                const response = await fetch('/api/works');
+                allWorks = await response.json();
+
+                document.getElementById('work-count').textContent = allWorks.length;
+                applySort();
+            } catch (error) { console.error('Error fetching works:', error); }
+        }
+
+        function renderWorks(works) {
+
+            const grid = document.getElementById('results-grid');
+            grid.innerHTML = '';
+            works.forEach(work => {
+                const card = document.createElement('div');
+                card.className = 'bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden card-hover transition duration-300 flex flex-col group';
+                const localMain = `/images/${work.rj_code}/main.jpg`;
+                const fallbackMain = `/images/no_image.jpg`;
+                const imgUrl = localMain;
+                const tagsHtml = (work.genres || []).slice(0, 4).map(tag => `<button class="tag-btn text-xs bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md transition" onclick="handleTagClick('${tag}', event)" oncontextmenu="handleTagContextMenu('${tag}', event)">${tag}</button>`).join('');
+                const score = work._sortScore ? `<div class="absolute top-2 right-2 bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded shadow z-10">Score: ${work._sortScore.toFixed(2)}</div>` : '';
+
+                // CVs in card
+                let cvHtml = '';
+                if (work.cv && work.cv.length > 0) {
+                    cvHtml = `<div class="text-xs text-slate-500 dark:text-slate-400 mb-2 truncate flex flex-wrap gap-1">
+                        ${work.cv.map(c => `<span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-xs cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition" onclick="handleTagClick('cv:' + '${c}', event)" oncontextmenu="handleTagContextMenu('cv:' + '${c}', event)">${c}</span>`).join('')}
+                    </div>`;
+                }
+
+                // Circle in card
+                const circleHtml = work.circle ? `<div class="mb-1"><span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-xs font-medium text-indigo-600 dark:text-indigo-400 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition" onclick="handleTagClick('circle:' + '${work.circle}', event)" oncontextmenu="handleTagContextMenu('circle:' + '${work.circle}', event)">${work.circle}</span></div>` : '';
+
+                card.innerHTML = `<div class="relative aspect-[4/3] bg-slate-100 dark:bg-slate-900 cursor-pointer overflow-hidden p-2" onclick="openModal('${work.rj_code}')">
+                    <img src="${imgUrl}" alt="${work.title}" class="w-full h-full object-contain transition duration-500 group-hover:scale-105" onerror="this.onerror=null;this.src='${fallbackMain}';">
+                    ${score}
+                </div>
+                <div class="p-4 flex-1 flex flex-col border-t border-slate-100 dark:border-slate-700">
+                    <h3 class="font-bold text-slate-800 dark:text-slate-100 text-base leading-snug mb-2 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition line-clamp-3" onclick="openModal('${work.rj_code}')" title="${work.title}">${work.title}</h3>
+                    ${circleHtml}
+                    ${cvHtml}
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-lg font-bold text-slate-900 dark:text-white">¥${work.price}</div>
+                        <div class="flex items-center gap-1 text-sm"><span class="text-yellow-500">★</span><span class="font-medium dark:text-slate-200">${work.rate_average}</span><span class="text-slate-400">(${work.dl_count} DL)</span></div>
+                    </div>
+                    <div class="flex flex-wrap gap-1 mt-auto">${tagsHtml}</div>
+                </div>`;
+                grid.appendChild(card);
+            });
+        }
+
+        function applySort() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const formula = document.getElementById('sort-formula').value;
+            let filtered = allWorks.filter(work => {
+                // Text Search (Title, Circle, CV, Tags)
+                let matchesText = true;
+                if (query) {
+                    const lowerTitle = work.title.toLowerCase();
+                    const lowerCircle = (work.circle || '').toLowerCase();
+                    const lowerRJ = work.rj_code.toLowerCase();
+
+                    if (query.startsWith('cv:')) {
+                        const cvName = query.replace('cv:', '').trim();
+                        matchesText = work.cv && work.cv.some(c => c.toLowerCase().includes(cvName));
+                    } else if (query.startsWith('circle:')) {
+                        const circleName = query.replace('circle:', '').trim();
+                        matchesText = lowerCircle.includes(circleName);
+                    } else if (query.startsWith('tag:')) {
+                        const tagName = query.replace('tag:', '').trim();
+                        matchesText = work.genres && work.genres.some(g => g.toLowerCase().includes(tagName));
+                    } else {
+                        const cvMatch = work.cv && work.cv.some(c => c.toLowerCase().includes(query));
+                        const tagMatch = work.genres && work.genres.some(g => g.toLowerCase().includes(query));
+                        matchesText = lowerTitle.includes(query) || lowerCircle.includes(query) || cvMatch || lowerRJ.includes(query) || tagMatch;
+                    }
+                }
+
+                // Tag Filter (Supports prefix logic)
+                const matchesInclude = activeTags.include.every(tag => checkTagMatch(work, tag));
+                const matchesExclude = activeTags.exclude.every(tag => !checkTagMatch(work, tag));
+
+                return matchesText && matchesInclude && matchesExclude;
+            });
+
+            try {
+                filtered.forEach(work => {
+                    const scope = { dl: work.dl_count || 0, price: work.price || 1, rate: work.rate_average || 0, fav: work.wishlist_count || 0 };
+                    work._sortScore = math.evaluate(formula, scope);
+                });
+                filtered.sort((a, b) => b._sortScore - a._sortScore);
+            } catch (e) { console.error("Invalid formula:", e); }
+            renderWorks(filtered);
+        }
+
+        function checkTagMatch(work, tag) {
+            const lowerTag = tag.toLowerCase();
+            if (lowerTag.startsWith('cv:')) {
+                const val = lowerTag.replace('cv:', '').trim();
+                return work.cv && work.cv.some(c => c.toLowerCase() === val);
+            }
+            if (lowerTag.startsWith('circle:')) {
+                const val = lowerTag.replace('circle:', '').trim();
+                return work.circle && work.circle.toLowerCase() === val;
+            }
+            if (lowerTag.startsWith('tag:')) {
+                const val = lowerTag.replace('tag:', '').trim();
+                return work.genres && work.genres.some(g => g.toLowerCase() === val);
+            }
+            // Default fallback to genre
+            return work.genres && work.genres.includes(tag);
+        }
+
+        function renderActiveTags() {
+            const container = document.getElementById('active-tags');
+            container.innerHTML = '';
+            activeTags.include.forEach(tag => {
+                container.innerHTML += `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">${tag}<button onclick="removeTag('${tag}', 'include')" class="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-indigo-400 hover:bg-indigo-200 hover:text-indigo-500 focus:outline-none">×</button></span>`;
+            });
+            activeTags.exclude.forEach(tag => {
+                container.innerHTML += `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">NOT ${tag}<button onclick="removeTag('${tag}', 'exclude')" class="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-red-400 hover:bg-red-200 hover:text-red-500 focus:outline-none">×</button></span>`;
+            });
+        }
+
+        function handleTagClick(tag, event) {
+            if (event) event.stopPropagation();
+            if (!activeTags.include.includes(tag) && !activeTags.exclude.includes(tag)) {
+                activeTags.include.push(tag);
+                renderActiveTags();
+                applySort();
+            }
+        }
+
+        function removeTag(tag, type) {
+            activeTags[type] = activeTags[type].filter(t => t !== tag);
+            renderActiveTags();
+            applySort();
+        }
+
+        function insertPrefix(prefix) {
+            const input = document.getElementById('search-input');
+            input.value = prefix;
+            input.focus();
+        }
+
+        function addManualFilter() {
+            const input = document.getElementById('search-input');
+            const val = input.value.trim();
+            if (val) {
+                handleTagClick(val);
+                input.value = '';
+            }
+        }
+
+        let contextMenuTag = null;
+        function handleTagContextMenu(tag, event) {
+            event.preventDefault();
+            event.stopPropagation();
+            contextMenuTag = tag;
+            const menu = document.getElementById('context-menu');
+            menu.style.left = `${event.pageX}px`;
+            menu.style.top = `${event.pageY}px`;
+            menu.classList.remove('hidden');
+            requestAnimationFrame(() => { menu.classList.remove('opacity-0', 'scale-95'); });
+        }
+        function hideContextMenu() {
+            const menu = document.getElementById('context-menu');
+            menu.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => menu.classList.add('hidden'), 100);
+        }
+        document.getElementById('ctx-search').addEventListener('click', () => {
+            if (contextMenuTag && !activeTags.include.includes(contextMenuTag)) {
+                activeTags.include.push(contextMenuTag);
+                activeTags.exclude = activeTags.exclude.filter(t => t !== contextMenuTag);
+                renderActiveTags();
+                applySort();
+            }
+        });
+        document.getElementById('ctx-exclude').addEventListener('click', () => {
+            if (contextMenuTag && !activeTags.exclude.includes(contextMenuTag)) {
+                activeTags.exclude.push(contextMenuTag);
+                activeTags.include = activeTags.include.filter(t => t !== contextMenuTag);
+                renderActiveTags();
+                applySort();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOMContentLoaded fired, calling fetchWorks');
+            window.fetchWorks = fetchWorks;
+            fetchWorks();
+            initTheme();
+            updateLangUI();
+            document.addEventListener('click', () => hideContextMenu());
+
+            // Close modal when clicking outside the panel (backdrop)
+            const detailModal = document.getElementById('detail-modal');
+            detailModal.addEventListener('click', (e) => {
+                if (!e.target.closest('.modal-panel')) {
+                    closeModal();
+                }
+            });
+            
+            const scrollContainer = document.getElementById('modal-scroll-container');
+            const imgContainer = document.getElementById('modal-img');
+            
+            if (scrollContainer && imgContainer) {
+                scrollContainer.addEventListener('scroll', () => {
+                    const scrollTop = scrollContainer.scrollTop;
+                    const scale = Math.max(0.8, 1 - scrollTop / 1000);
+                    const opacity = Math.max(0.3, 1 - scrollTop / 500);
+                    imgContainer.style.transform = `scale(${scale})`;
+                    imgContainer.style.opacity = opacity;
+                });
+            }
+        });
+
+        // Modal Logic
+        let ratingChartInstance = null;
+        function openModal(rj_code) {
+            console.log('openModal called with:', rj_code);
+            console.log('allWorks length:', allWorks.length);
+            const work = allWorks.find(w => w.rj_code === rj_code);
+            console.log('Found work:', work);
+            if (!work) return;
+
+            const modal = document.getElementById('detail-modal');
+            document.getElementById('modal-title').textContent = work.title;
+            document.getElementById('modal-circle').textContent = work.circle || 'Unknown';
+            document.getElementById('modal-date').textContent = work.release_date || '';
+            document.getElementById('modal-dl').textContent = work.dl_count || 0;
+            document.getElementById('modal-price').textContent = work.price || 0;
+            document.getElementById('modal-rate-avg').textContent = work.rate_average || '-';
+            const descEl = document.getElementById('modal-desc');
+            const descSamples = document.getElementById('desc-samples');
+            descEl.innerHTML = '';
+            descSamples.innerHTML = '';
+            const descUrls = [];
+
+            // Inline Description with Images (content_tokens)
+            if (Array.isArray(work.content_tokens) && work.content_tokens.length > 0) {
+                work.content_tokens.forEach(token => {
+                    if (token.type === 'text') {
+                        const span = document.createElement('span');
+                        span.textContent = token.content;
+                        descEl.appendChild(span);
+                    } else if (token.type === 'image') {
+                        const imgUrl = token.url;
+                        const img = document.createElement('img');
+                        img.src = imgUrl;
+                        img.className = 'w-full rounded-lg shadow-sm my-4';
+                        img.loading = 'lazy';
+                        descEl.appendChild(img);
+                        descUrls.push(imgUrl);
+                    }
+                });
+            } else {
+                descEl.textContent = work.description || '';
+                
+                // Fallback: Show sample images in grid if no tokens
+                // 分類: sample用と desc用にURLを分ける
+                const sampleUrls = [];
+                if (work.media && work.media.length > 0) {
+                    work.media.forEach(url => {
+                        const fullUrl = url.startsWith('http') ? url : `https:${url}`;
+                        if (!fullUrl.includes('/parts/')) {
+                            sampleUrls.push(fullUrl);
+                        }
+                    });
+                }
+
+                // 作品説明内に sample_XX を表示
+                const fallbackImg = `/images/no_image.jpg`;
+                sampleUrls.forEach((url, idx) => {
+                    let ext = "jpg";
+                    try {
+                        const u = new URL(url);
+                        const split = u.pathname.split(".");
+                        if (split.length > 1) ext = split.pop();
+                    } catch (e) {}
+                    const padIdx = String(idx + 1).padStart(2, "0");
+                    const localUrl = `/images/${work.rj_code}/sample_${padIdx}.${ext}`;
+                    descSamples.innerHTML += `<img src="${localUrl}" class="w-full rounded-lg shadow-sm object-cover h-32" onerror="this.onerror=null;this.src='${fallbackImg}';">`;
+                });
+            }
+            document.getElementById('modal-link').href = `https://www.dlsite.com/maniax/work/=/product_id/${work.rj_code}.html`;
+
+            const localMain = `/images/${work.rj_code}/main.jpg`;
+            const fallbackMain = `/images/no_image.jpg`;
+            const modalImg = document.getElementById('modal-img');
+            modalImg.src = localMain;
+            modalImg.onerror = () => { modalImg.onerror = null; modalImg.src = fallbackMain; };
+
+            // CVs
+            const cvList = document.getElementById('modal-cv-list');
+            const cvSection = document.getElementById('modal-cv-section');
+            cvList.innerHTML = '';
+            if (work.cv && work.cv.length > 0) {
+                work.cv.forEach(c => {
+                    cvList.innerHTML += `<span class="px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-md text-xs font-medium cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition" onclick="handleTagClick('cv:' + '${c}', event)" oncontextmenu="handleTagContextMenu('cv:' + '${c}', event)">${c}</span>`;
+                });
+                cvSection.classList.remove('hidden');
+            } else {
+                cvSection.classList.add('hidden');
+            }
+
+            // Tags
+            const tagsContainer = document.getElementById('modal-tags');
+            tagsContainer.innerHTML = (work.genres || []).map(tag => `<button class="tag-btn text-xs bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md transition" onclick="handleTagClick('${tag}', event)" oncontextmenu="handleTagContextMenu('${tag}', event)">${tag}</button>`).join('');
+
+            // Media & Embeds
+            const mediaContainer = document.getElementById('media-container');
+            const mediaSection = document.getElementById('media-section');
+            mediaContainer.innerHTML = '';
+            
+            const fallbackUrl = `/images/no_image.jpg`;
+            // メイン画像を先頭に追加
+            // localMain is already defined above
+            mediaContainer.innerHTML += `<img src="${localMain}" class="h-64 rounded-lg shadow-sm cursor-pointer hover:opacity-90 transition snap-center" onerror="this.onerror=null;this.src='${fallbackUrl}';" onclick="window.open(this.src, '_blank')">`;
+
+            // 作品説明由来の画像(desc_XX)のみを並べる
+            // descUrls is already populated above
+            descUrls.forEach((url, idx) => {
+                let ext = "jpg";
+                try {
+                    const u = new URL(url);
+                    const split = u.pathname.split(".");
+                    if (split.length > 1) ext = split.pop();
+                } catch (e) {}
+                const padIdx = String(idx + 1).padStart(2, "0");
+                const localUrl = `/images/${work.rj_code}/desc_${padIdx}.${ext}`;
+                mediaContainer.innerHTML += `<img src="${localUrl}" class="h-64 rounded-lg shadow-sm cursor-pointer hover:opacity-90 transition snap-center" onerror="this.onerror=null;this.src='${fallbackUrl}';" onclick="window.open(this.src, '_blank')">`;
+            });
+
+            mediaSection.classList.remove('hidden');
+
+            // Embeds & Chobit
+            const embedsContainer = document.getElementById('embeds-container');
+            const embedsSection = document.getElementById('embeds-section');
+            embedsContainer.innerHTML = '';
+            let hasEmbeds = false;
+
+            // Chobit
+            if (work.chobit_url) {
+                 const div = document.createElement('div');
+                 div.innerHTML = `<iframe width="100%" height="215" frameborder="0" allowfullscreen="" src="${work.chobit_url}"></iframe>`;
+                 embedsContainer.appendChild(div);
+                 hasEmbeds = true;
+            }
+
+            // Other Embeds
+            if (work.embeds && work.embeds.length > 0) {
+                work.embeds.forEach(embed => {
+                    const div = document.createElement('div');
+                    div.innerHTML = embed;
+                    embedsContainer.appendChild(div);
+                });
+                hasEmbeds = true;
+            }
+
+            if (hasEmbeds) {
+                embedsSection.classList.remove('hidden');
+            } else {
+                embedsSection.classList.add('hidden');
+            }
+
+            // Chart
+            if (ratingChartInstance) ratingChartInstance.destroy();
+            const ctx = document.getElementById('ratingChart').getContext('2d');
+            const rateData = work.rate_count_detail || [];
+            // Assuming rate_count_detail is array of {review_point: 1, count: 10, ...}
+            // We need to map it to 1-5 stars.
+            const counts = [0, 0, 0, 0, 0];
+            rateData.forEach(r => {
+                if (r.review_point >= 1 && r.review_point <= 5) counts[r.review_point - 1] = r.count;
+            });
+
+            ratingChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['1★', '2★', '3★', '4★', '5★'],
+                    datasets: [{
+                        label: 'Reviews',
+                        data: counts,
+                        backgroundColor: '#6366f1',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } }
+                }
+            });
+
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Theme Logic
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            const btn = document.getElementById('theme-toggle');
+            const darkIcon = document.getElementById('theme-toggle-dark-icon');
+            const lightIcon = document.getElementById('theme-toggle-light-icon');
+            if (document.documentElement.classList.contains('dark')) {
+                lightIcon.classList.remove('hidden');
+            } else {
+                darkIcon.classList.remove('hidden');
+            }
+            btn.addEventListener('click', () => {
+                darkIcon.classList.toggle('hidden');
+                lightIcon.classList.toggle('hidden');
+                if (localStorage.theme === 'dark') {
+                    localStorage.theme = 'light';
+                    document.documentElement.classList.remove('dark');
+                } else {
+                    localStorage.theme = 'dark';
+                    document.documentElement.classList.add('dark');
+                }
+            });
+        }
+
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+            currentLang = currentLang === 'ja' ? 'en' : 'ja';
+            document.getElementById('lang-toggle').textContent = currentLang === 'ja' ? 'EN' : 'JP';
+            updateLangUI();
+        });
+
+        function updateLangUI() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[currentLang][key]) {
+                    el.textContent = translations[currentLang][key];
+                }
+            });
+        }
+
+        document.getElementById('apply-sort').addEventListener('click', applySort);
+        document.getElementById('search-input').addEventListener('input', applySort);
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.getElementById('sort-formula').value = e.currentTarget.dataset.formula;
+                applySort();
+            });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+
+</html>
