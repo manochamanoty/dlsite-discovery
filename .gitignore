@@ -1,0 +1,29 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.env
+.env.local
+.venv/
+venv/
+
+# Data and large artifacts (keep these local)
+data/raw/
+data/cache/
+/images/
+!static/images/no_image.jpg
+*.db
+*.sqlite3
+*.db-journal
+
+# Weekly code lists (remove this line if you prefer to track them)
+codes/*.txt
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.coverage

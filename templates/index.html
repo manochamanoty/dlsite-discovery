@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ASMR Finder</title>
+    <meta name="referrer" content="no-referrer">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
@@ -294,6 +295,12 @@
             en: { loaded: "Loaded", works: "works", filter: "Filter", custom_sort: "🧪 Custom Sort", sort_btn: "Sort", preset_cosplay: "Cosplay (DL/Price)", preset_pop: "Popularity (DL)", preset_hidden: "Hidden Gem (Rate*DL)", view_dlsite: "View on DLsite", description: "Description", ctx_search: "Add to Search", ctx_exclude: "Exclude Tag" }
         };
 
+        const normalizeUrl = (url) => {
+            if (!url) return null;
+            if (url.startsWith('//')) return `https:${url}`;
+            return url;
+        };
+
         async function fetchWorks() {
 
             try {
@@ -309,12 +316,12 @@
 
             const grid = document.getElementById('results-grid');
             grid.innerHTML = '';
+            const fallbackMain = '/images/no_image.jpg';
             works.forEach(work => {
                 const card = document.createElement('div');
                 card.className = 'bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden card-hover transition duration-300 flex flex-col group';
-                const localMain = `/images/${work.rj_code}/main.jpg`;
-                const fallbackMain = `/images/no_image.jpg`;
-                const imgUrl = localMain;
+                const mainUrl = normalizeUrl(work.img_url || (work.media && work.media[0]));
+                const imgUrl = mainUrl || '/images/no_image.jpg';
                 const tagsHtml = (work.genres || []).slice(0, 4).map(tag => `<button class="tag-btn text-xs bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md transition" onclick="handleTagClick('${tag}', event)" oncontextmenu="handleTagContextMenu('${tag}', event)">${tag}</button>`).join('');
                 const score = work._sortScore ? `<div class="absolute top-2 right-2 bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded shadow z-10">Score: ${work._sortScore.toFixed(2)}</div>` : '';
 
@@ -330,7 +337,7 @@
                 const circleHtml = work.circle ? `<div class="mb-1"><span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-xs font-medium text-indigo-600 dark:text-indigo-400 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900 transition" onclick="handleTagClick('circle:' + '${work.circle}', event)" oncontextmenu="handleTagContextMenu('circle:' + '${work.circle}', event)">${work.circle}</span></div>` : '';
 
                 card.innerHTML = `<div class="relative aspect-[4/3] bg-slate-100 dark:bg-slate-900 cursor-pointer overflow-hidden p-2" onclick="openModal('${work.rj_code}')">
-                    <img src="${imgUrl}" alt="${work.title}" class="w-full h-full object-contain transition duration-500 group-hover:scale-105" onerror="this.onerror=null;this.src='${fallbackMain}';">
+                    <img src="${imgUrl}" alt="${work.title}" class="w-full h-full object-contain transition duration-500 group-hover:scale-105" onerror="this.onerror=null;this.src='/images/no_image.jpg';">
                     ${score}
                 </div>
                 <div class="p-4 flex-1 flex flex-col border-t border-slate-100 dark:border-slate-700">
@@ -569,25 +576,18 @@
 
                 // 作品説明内に sample_XX を表示
                 const fallbackImg = `/images/no_image.jpg`;
-                sampleUrls.forEach((url, idx) => {
-                    let ext = "jpg";
-                    try {
-                        const u = new URL(url);
-                        const split = u.pathname.split(".");
-                        if (split.length > 1) ext = split.pop();
-                    } catch (e) {}
-                    const padIdx = String(idx + 1).padStart(2, "0");
-                    const localUrl = `/images/${work.rj_code}/sample_${padIdx}.${ext}`;
-                    descSamples.innerHTML += `<img src="${localUrl}" class="w-full rounded-lg shadow-sm object-cover h-32" onerror="this.onerror=null;this.src='${fallbackImg}';">`;
+                sampleUrls.forEach((url) => {
+                    const normUrl = normalizeUrl(url);
+                    descSamples.innerHTML += `<img src="${normUrl || fallbackImg}" class="w-full rounded-lg shadow-sm object-cover h-32" onerror="this.onerror=null;this.src='/images/no_image.jpg';">`;
                 });
             }
             document.getElementById('modal-link').href = `https://www.dlsite.com/maniax/work/=/product_id/${work.rj_code}.html`;
 
-            const localMain = `/images/${work.rj_code}/main.jpg`;
-            const fallbackMain = `/images/no_image.jpg`;
-            const modalImg = document.getElementById('modal-img');
-            modalImg.src = localMain;
-            modalImg.onerror = () => { modalImg.onerror = null; modalImg.src = fallbackMain; };
+        const mainUrl = normalizeUrl(work.img_url || (work.media && work.media[0]));
+        const fallbackMain = `/images/no_image.jpg`;
+        const modalImg = document.getElementById('modal-img');
+        modalImg.src = mainUrl || fallbackMain;
+        modalImg.onerror = () => { modalImg.onerror = null; modalImg.src = fallbackMain; };
 
             // CVs
             const cvList = document.getElementById('modal-cv-list');
@@ -614,20 +614,13 @@
             const fallbackUrl = `/images/no_image.jpg`;
             // メイン画像を先頭に追加
             // localMain is already defined above
-            mediaContainer.innerHTML += `<img src="${localMain}" class="h-64 rounded-lg shadow-sm cursor-pointer hover:opacity-90 transition snap-center" onerror="this.onerror=null;this.src='${fallbackUrl}';" onclick="window.open(this.src, '_blank')">`;
+            mediaContainer.innerHTML += `<img src="${mainUrl || fallbackUrl}" class="h-64 rounded-lg shadow-sm cursor-pointer hover:opacity-90 transition snap-center" onerror="this.onerror=null;this.src='${fallbackUrl}';" onclick="window.open(this.src, '_blank')">`;
 
             // 作品説明由来の画像(desc_XX)のみを並べる
             // descUrls is already populated above
-            descUrls.forEach((url, idx) => {
-                let ext = "jpg";
-                try {
-                    const u = new URL(url);
-                    const split = u.pathname.split(".");
-                    if (split.length > 1) ext = split.pop();
-                } catch (e) {}
-                const padIdx = String(idx + 1).padStart(2, "0");
-                const localUrl = `/images/${work.rj_code}/desc_${padIdx}.${ext}`;
-                mediaContainer.innerHTML += `<img src="${localUrl}" class="h-64 rounded-lg shadow-sm cursor-pointer hover:opacity-90 transition snap-center" onerror="this.onerror=null;this.src='${fallbackUrl}';" onclick="window.open(this.src, '_blank')">`;
+            descUrls.forEach((url) => {
+                const norm = normalizeUrl(url);
+                mediaContainer.innerHTML += `<img src="${norm || fallbackUrl}" class="h-64 rounded-lg shadow-sm cursor-pointer hover:opacity-90 transition snap-center" onerror="this.onerror=null;this.src='${fallbackUrl}';" onclick="window.open(this.src, '_blank')">`;
             });
 
             mediaSection.classList.remove('hidden');

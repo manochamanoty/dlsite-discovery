@@ -15,7 +15,6 @@ from dlsite_app.services.ingest import ingest_json_files
 CODE_DIR = ROOT / "codes"
 NEW_FILE = CODE_DIR / "New_Code.txt"
 UPDATE_FILE = CODE_DIR / "Update_Code.txt"
-IMAGE_ROOT = settings.image_root
 
 
 def load_codes(path: Path) -> list[str]:
@@ -43,7 +42,7 @@ def main():
         # Skip if already processed
         if code in processed or code in update_codes:
             continue
-        success = save_work_to_json(code, download_media=True, image_root=IMAGE_ROOT)
+        success = save_work_to_json(code, download_media=False, chobit_only=True)
         if success:
             processed.append(code)
 

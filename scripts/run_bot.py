@@ -28,10 +28,10 @@ def main():
     print("Step 1/3: Removing duplicates from New_Code.txt vs Update_Code.txt...")
     dedup_main()
 
-    print("Step 2/3: Scraping NEW codes (Chobit, images, JSON, DB)...")
+    print("Step 2/3: Scraping NEW codes (Chobit embed only, JSON, DB)...")
     new_main()
 
-    print("Step 3/3: Updating existing codes (JSON, DB)...")
+    print("Step 3/3: Updating existing codes (static+dynamic, JSON, DB)...")
     update_main()
 
     print("All steps completed.")

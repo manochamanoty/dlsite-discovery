@@ -349,17 +349,19 @@ def save_work_to_json(
     output_dir: Path | None = None,
     download_media: bool = False,
     image_root: Path | None = None,
+    chobit_only: bool = False,
 ) -> bool:
-    """Fetch static+dynamic data for a single RJ code and persist to JSON.
+    """Fetch data for a single RJ code and persist to JSON.
 
-    If download_media=True, main and sample images are downloaded to image_root/rj_code/.
+    - If chobit_only=True, only static page fetch is performed (for chobit embed and metadata).
+    - If download_media=True, main and sample images are downloaded to image_root/rj_code/.
     """
     output_dir = Path(output_dir or settings.data_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Processing: {rj_code}")
     static_data = fetch_static_data(rj_code)
-    dynamic_data = fetch_dynamic_data(rj_code)
+    dynamic_data = {} if chobit_only else fetch_dynamic_data(rj_code)
 
     if not static_data and not dynamic_data:
         print(f"Failed to fetch any data for {rj_code}")
