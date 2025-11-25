@@ -37,7 +37,7 @@ try {
     Run "git push origin dev"
 
     Run "git checkout main"
-    Run "git merge dev"
+    Run "git merge dev --no-edit"
     Run "git push origin main"
 
     Run "git checkout dev"
